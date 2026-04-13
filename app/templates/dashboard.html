@@ -1,0 +1,208 @@
+{% extends "base.html" %} {% block content %}
+
+<h2 class="mb-4">Security Monitoring Dashboard</h2>
+
+<!-- Protection Status -->
+<div class="mb-3">
+  <h4>
+    Protection Status:
+    <span id="protectionStatus" class="badge bg-success">ON</span>
+  </h4>
+</div>
+
+<!-- Toggle -->
+<div class="mb-3">
+  <button onclick="toggleProtection('on')" class="btn btn-success">
+    Enable
+  </button>
+  <button onclick="toggleProtection('off')" class="btn btn-danger">
+    Disable
+  </button>
+</div>
+
+<!-- Stats -->
+<div class="row">
+  <div class="col-md-4">
+    <div class="card p-3 shadow">
+      <h5>Blocked IPs</h5>
+      <h2 id="blockedCount">0</h2>
+    </div>
+  </div>
+
+  <div class="col-md-4">
+    <div class="card p-3 shadow">
+      <h5>Total Alerts</h5>
+      <h2 id="alertCount">0</h2>
+    </div>
+  </div>
+
+  <div class="col-md-4">
+    <div class="card p-3 shadow">
+      <h5>Status</h5>
+      <h2 id="statusText">Normal</h2>
+    </div>
+  </div>
+</div>
+
+<!-- Charts -->
+<div class="row mt-4">
+  <div class="col-md-4">
+    <div class="card p-3 shadow">
+      <h5>Alert Types</h5>
+      <canvas id="alertChart"></canvas>
+    </div>
+  </div>
+
+  <div class="col-md-4">
+    <div class="card p-3 shadow">
+      <h5>Traffic Trend</h5>
+      <canvas id="trafficChart"></canvas>
+    </div>
+  </div>
+
+  <div class="col-md-4">
+    <div class="card p-3 shadow">
+      <h5>Top Attackers</h5>
+      <canvas id="attackerChart"></canvas>
+    </div>
+  </div>
+</div>
+
+<!-- Lists -->
+<div class="row mt-4">
+  <div class="col-md-6">
+    <div class="card p-3 shadow">
+      <h5>Blocked IPs</h5>
+      <ul id="blockedList"></ul>
+    </div>
+  </div>
+
+  <div class="col-md-6">
+    <div class="card p-3 shadow">
+      <h5>Recent Alerts</h5>
+      <ul id="alertList"></ul>
+    </div>
+  </div>
+</div>
+
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<script>
+  /* Toggle */
+  function toggleProtection(mode) {
+    fetch(`/admin/protection/${mode}`)
+      .then((res) => res.json())
+      .then((data) => alert(data.status));
+  }
+
+  /* Initialize Charts */
+  let alertChart = new Chart(document.getElementById("alertChart"), {
+    type: "pie",
+    data: {
+      labels: ["Rate Limit", "Blocked", "Burst", "Honeypot"],
+      datasets: [{ data: [0, 0, 0, 0] }],
+    },
+  });
+
+  let trafficChart = new Chart(document.getElementById("trafficChart"), {
+    type: "line",
+    data: {
+      labels: [],
+      datasets: [{ label: "Requests", data: [] }],
+    },
+  });
+
+  let attackerChart = new Chart(document.getElementById("attackerChart"), {
+    type: "bar",
+    data: {
+      labels: [],
+      datasets: [{ label: "Requests", data: [] }],
+    },
+  });
+
+  /* Update Dashboard */
+  async function updateDashboard() {
+    try {
+      let blocked = await fetch("/admin/blocked").then((r) => r.json());
+      let alerts = await fetch("/admin/alerts").then((r) => r.json());
+      let attackers = await fetch("/admin/top-attackers").then((r) => r.json());
+      let status = await fetch("/admin/protection/status").then((r) =>
+        r.json(),
+      );
+
+      // Protection status
+      let statusEl = document.getElementById("protectionStatus");
+      if (status.enabled) {
+        statusEl.innerText = "ON";
+        statusEl.className = "badge bg-success";
+      } else {
+        statusEl.innerText = "OFF";
+        statusEl.className = "badge bg-danger";
+      }
+
+      // Stats
+      document.getElementById("blockedCount").innerText =
+        blocked.blocked_ips.length;
+      document.getElementById("alertCount").innerText = alerts.alerts.length;
+
+      document.getElementById("statusText").innerText =
+        alerts.alerts.length > 20 ? "Under Attack" : "Normal";
+
+      // Alert types
+      let rate = 0,
+        blockedCount = 0,
+        burst = 0,
+        honeypot = 0;
+      alerts.alerts.forEach((a) => {
+        if (a.reason.includes("rate")) rate++;
+        else if (a.reason.includes("blocked")) blockedCount++;
+        else if (a.reason.includes("burst")) burst++;
+        else if (a.reason.includes("honeypot")) honeypot++;
+      });
+
+      alertChart.data.datasets[0].data = [rate, blockedCount, burst, honeypot];
+      alertChart.update();
+
+      // Traffic
+      let totalRequests = attackers.attackers.reduce(
+        (sum, a) => sum + a.count,
+        0,
+      );
+
+      trafficChart.data.labels.push(new Date().toLocaleTimeString());
+      trafficChart.data.datasets[0].data.push(totalRequests);
+
+      if (trafficChart.data.labels.length > 10) {
+        trafficChart.data.labels.shift();
+        trafficChart.data.datasets[0].data.shift();
+      }
+
+      trafficChart.update();
+
+      // Attackers
+      attackerChart.data.labels = attackers.attackers.map((a) => a.ip);
+      attackerChart.data.datasets[0].data = attackers.attackers.map(
+        (a) => a.count,
+      );
+      attackerChart.update();
+
+      // Lists
+      document.getElementById("blockedList").innerHTML = blocked.blocked_ips
+        .map((ip) => `<li>${ip.ip} - ${ip.blocked_for_seconds}s</li>`)
+        .join("");
+
+      document.getElementById("alertList").innerHTML = alerts.alerts
+        .slice(-5)
+        .map((a) => `<li>${a.ip} - ${a.reason}</li>`)
+        .join("");
+    } catch (e) {
+      console.error("Dashboard error:", e);
+    }
+  }
+
+  /* Refresh */
+  setInterval(updateDashboard, 1000);
+</script>
+
+{% endblock %}

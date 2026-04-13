@@ -1,0 +1,31 @@
+{% extends "base.html" %} {% block content %}
+
+<h2>Products</h2>
+
+<div class="row">
+  {% for p in products %}
+  <div class="col-md-4 mb-3">
+    <div class="card p-3">
+      <h5>{{ p.name }}</h5>
+      <p>₹{{ p.price }}</p>
+      <button class="btn btn-primary add-btn" data-id="{{ p.id }}">Add</button>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+
+<script>
+  document.querySelectorAll(".add-btn").forEach(function (btn) {
+    btn.addEventListener("click", function () {
+      fetch("/cart/add", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ product_id: parseInt(this.dataset.id) }),
+      })
+        .then((res) => res.json())
+        .then((data) => alert(data.message || data.error));
+    });
+  });
+</script>
+
+{% endblock %}
