@@ -1,27 +1,33 @@
 {% extends "base.html" %} {% block content %}
 
+<!-- ================= PAGE TITLE ================= -->
 <h2 class="mb-4">Security Monitoring Dashboard</h2>
 
-<!-- Protection Status -->
+<!-- ================= PROTECTION STATUS ================= -->
 <div class="mb-3">
   <h4>
     Protection Status:
+    <!-- Dynamic badge showing ON/OFF -->
     <span id="protectionStatus" class="badge bg-success">ON</span>
   </h4>
 </div>
 
-<!-- Toggle -->
+<!-- ================= TOGGLE BUTTONS ================= -->
 <div class="mb-3">
+  <!-- Enable protection -->
   <button onclick="toggleProtection('on')" class="btn btn-success">
     Enable
   </button>
+
+  <!-- Disable protection -->
   <button onclick="toggleProtection('off')" class="btn btn-danger">
     Disable
   </button>
 </div>
 
-<!-- Stats -->
+<!-- ================= STAT CARDS ================= -->
 <div class="row">
+  <!-- Blocked IPs -->
   <div class="col-md-4">
     <div class="card p-3 shadow">
       <h5>Blocked IPs</h5>
@@ -29,6 +35,7 @@
     </div>
   </div>
 
+  <!-- Total Alerts -->
   <div class="col-md-4">
     <div class="card p-3 shadow">
       <h5>Total Alerts</h5>
@@ -36,6 +43,7 @@
     </div>
   </div>
 
+  <!-- System Status -->
   <div class="col-md-4">
     <div class="card p-3 shadow">
       <h5>Status</h5>
@@ -44,8 +52,9 @@
   </div>
 </div>
 
-<!-- Charts -->
+<!-- ================= CHART SECTION ================= -->
 <div class="row mt-4">
+  <!-- Alert Types Pie Chart -->
   <div class="col-md-4">
     <div class="card p-3 shadow">
       <h5>Alert Types</h5>
@@ -53,6 +62,7 @@
     </div>
   </div>
 
+  <!-- Traffic Trend Line Chart -->
   <div class="col-md-4">
     <div class="card p-3 shadow">
       <h5>Traffic Trend</h5>
@@ -60,6 +70,7 @@
     </div>
   </div>
 
+  <!-- Top Attackers Bar Chart -->
   <div class="col-md-4">
     <div class="card p-3 shadow">
       <h5>Top Attackers</h5>
@@ -68,8 +79,9 @@
   </div>
 </div>
 
-<!-- Lists -->
+<!-- ================= LIST SECTION ================= -->
 <div class="row mt-4">
+  <!-- Blocked IP List -->
   <div class="col-md-6">
     <div class="card p-3 shadow">
       <h5>Blocked IPs</h5>
@@ -77,6 +89,7 @@
     </div>
   </div>
 
+  <!-- Recent Alerts List -->
   <div class="col-md-6">
     <div class="card p-3 shadow">
       <h5>Recent Alerts</h5>
@@ -85,18 +98,21 @@
   </div>
 </div>
 
-<!-- Chart.js -->
+<!-- ================= CHART.JS LIBRARY ================= -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <script>
-  /* Toggle */
+  /* ================= TOGGLE PROTECTION ================= */
   function toggleProtection(mode) {
+    // Send request to backend to enable/disable protection
     fetch(`/admin/protection/${mode}`)
       .then((res) => res.json())
-      .then((data) => alert(data.status));
+      .then((data) => alert(data.status)); // Show response status
   }
 
-  /* Initialize Charts */
+  /* ================= INITIALIZE CHARTS ================= */
+
+  // Pie chart for alert types
   let alertChart = new Chart(document.getElementById("alertChart"), {
     type: "pie",
     data: {
@@ -105,14 +121,16 @@
     },
   });
 
+  // Line chart for traffic trend
   let trafficChart = new Chart(document.getElementById("trafficChart"), {
     type: "line",
     data: {
-      labels: [],
+      labels: [], // timestamps
       datasets: [{ label: "Requests", data: [] }],
     },
   });
 
+  // Bar chart for top attackers
   let attackerChart = new Chart(document.getElementById("attackerChart"), {
     type: "bar",
     data: {
@@ -121,9 +139,10 @@
     },
   });
 
-  /* Update Dashboard */
+  /* ================= UPDATE DASHBOARD ================= */
   async function updateDashboard() {
     try {
+      // Fetch data from backend APIs
       let blocked = await fetch("/admin/blocked").then((r) => r.json());
       let alerts = await fetch("/admin/alerts").then((r) => r.json());
       let attackers = await fetch("/admin/top-attackers").then((r) => r.json());
@@ -131,8 +150,9 @@
         r.json(),
       );
 
-      // Protection status
+      /* -------- Protection Status -------- */
       let statusEl = document.getElementById("protectionStatus");
+
       if (status.enabled) {
         statusEl.innerText = "ON";
         statusEl.className = "badge bg-success";
@@ -141,19 +161,22 @@
         statusEl.className = "badge bg-danger";
       }
 
-      // Stats
+      /* -------- Stats Update -------- */
       document.getElementById("blockedCount").innerText =
         blocked.blocked_ips.length;
+
       document.getElementById("alertCount").innerText = alerts.alerts.length;
 
+      // Determine system state
       document.getElementById("statusText").innerText =
         alerts.alerts.length > 20 ? "Under Attack" : "Normal";
 
-      // Alert types
+      /* -------- Alert Type Calculation -------- */
       let rate = 0,
         blockedCount = 0,
         burst = 0,
         honeypot = 0;
+
       alerts.alerts.forEach((a) => {
         if (a.reason.includes("rate")) rate++;
         else if (a.reason.includes("blocked")) blockedCount++;
@@ -161,18 +184,21 @@
         else if (a.reason.includes("honeypot")) honeypot++;
       });
 
+      // Update pie chart
       alertChart.data.datasets[0].data = [rate, blockedCount, burst, honeypot];
       alertChart.update();
 
-      // Traffic
+      /* -------- Traffic Trend -------- */
       let totalRequests = attackers.attackers.reduce(
         (sum, a) => sum + a.count,
         0,
       );
 
+      // Add new time point
       trafficChart.data.labels.push(new Date().toLocaleTimeString());
       trafficChart.data.datasets[0].data.push(totalRequests);
 
+      // Keep only last 10 points
       if (trafficChart.data.labels.length > 10) {
         trafficChart.data.labels.shift();
         trafficChart.data.datasets[0].data.shift();
@@ -180,28 +206,33 @@
 
       trafficChart.update();
 
-      // Attackers
+      /* -------- Top Attackers -------- */
       attackerChart.data.labels = attackers.attackers.map((a) => a.ip);
       attackerChart.data.datasets[0].data = attackers.attackers.map(
         (a) => a.count,
       );
       attackerChart.update();
 
-      // Lists
+      /* -------- Lists Update -------- */
+
+      // Blocked IPs list
       document.getElementById("blockedList").innerHTML = blocked.blocked_ips
         .map((ip) => `<li>${ip.ip} - ${ip.blocked_for_seconds}s</li>`)
         .join("");
 
+      // Recent alerts (last 5)
       document.getElementById("alertList").innerHTML = alerts.alerts
         .slice(-5)
         .map((a) => `<li>${a.ip} - ${a.reason}</li>`)
         .join("");
     } catch (e) {
+      // Handle errors
       console.error("Dashboard error:", e);
     }
   }
 
-  /* Refresh */
+  /* ================= AUTO REFRESH ================= */
+  // Refresh dashboard every 1 second
   setInterval(updateDashboard, 1000);
 </script>
 

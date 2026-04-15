@@ -1,29 +1,53 @@
 {% extends "base.html" %} {% block content %}
 
+<!-- ================= PAGE TITLE ================= -->
 <h2>Products</h2>
 
+<!-- ================= PRODUCT GRID ================= -->
 <div class="row">
   {% for p in products %}
+  <!-- Each product card -->
   <div class="col-md-4 mb-3">
     <div class="card p-3">
+      <!-- Product name -->
       <h5>{{ p.name }}</h5>
+
+      <!-- Product price -->
       <p>₹{{ p.price }}</p>
+
+      <!-- Add to cart button with product ID -->
       <button class="btn btn-primary add-btn" data-id="{{ p.id }}">Add</button>
     </div>
   </div>
   {% endfor %}
 </div>
 
+<!-- ================= SCRIPT ================= -->
 <script>
+  // Select all "Add" buttons
   document.querySelectorAll(".add-btn").forEach(function (btn) {
+    // Add click event listener to each button
     btn.addEventListener("click", function () {
+      // Send POST request to add product to cart
       fetch("/cart/add", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ product_id: parseInt(this.dataset.id) }),
+
+        // Set request headers
+        headers: {
+          "Content-Type": "application/json",
+        },
+
+        // Send product ID in request body
+        body: JSON.stringify({
+          product_id: parseInt(this.dataset.id),
+        }),
       })
-        .then((res) => res.json())
-        .then((data) => alert(data.message || data.error));
+        .then((res) => res.json()) // Convert response to JSON
+
+        .then((data) =>
+          // Show success or error message
+          alert(data.message || data.error),
+        );
     });
   });
 </script>

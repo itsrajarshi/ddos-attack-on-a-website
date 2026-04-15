@@ -1,13 +1,18 @@
 {% extends "base.html" %} {% block content %}
 
+<!-- ================= PAGE TITLE ================= -->
 <h2>Cart</h2>
 
+<!-- ================= CART CONTENT ================= -->
 {% if cart %}
+<!-- If cart has items, display them in a list -->
 <ul>
   {% for item in cart %}
+  <!-- Display each item's name and price -->
   <li>{{ item.name }} - ₹{{ item.price }}</li>
   {% endfor %}
 </ul>
 {% else %}
+<!-- If cart is empty -->
 <p>Cart is empty</p>
 {% endif %} {% endblock %}
