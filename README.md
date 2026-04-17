@@ -3,10 +3,7 @@
 This repository demonstrates how a Flask-based web application behaves under normal traffic and during a simulated DDoS attack, then shows how layered defenses reduce abuse impact.
 
 ## Demo
-
-<p align="center">
-  <video src="assets/demo.mp4" controls width="900"></video>
-</p>
+https://github.com/user-attachments/assets/65a491e7-d43b-43b0-be8a-8334e22dcab5
 
 If the embedded player is not supported in your browser, open the video directly: [Watch demo](assets/demo.mp4).
 
