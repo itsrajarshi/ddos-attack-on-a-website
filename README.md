@@ -1,85 +1,96 @@
-# DDoS Attack Case Study (Flask Website)
+# DDoS Attack Case Study (Flask Web Application)
 
-This project demonstrates:
-- A realistic multi-route Flask e-commerce style site.
-- A DDoS simulation script that floods one endpoint.
-- A defense layer with rate limiting, temporary IP blocking, and IDS-like alerts.
-- Firewall-like behavior by denying abusive clients (`429` + blocklist period).
+This repository demonstrates how a Flask-based web application behaves under normal traffic and during a simulated DDoS attack, then shows how layered defenses reduce abuse impact.
+
+## Demo
+
+<p align="center">
+  <video src="assets/demo.mp4" controls width="900"></video>
+</p>
+
+If the embedded player is not supported in your browser, open the video directly: [Watch demo](assets/demo.mp4).
+
+## Key Highlights
+
+- Multi-route Flask e-commerce style application.
+- DDoS traffic simulator targeting configurable endpoints.
+- Layered defense strategy:
+  - Rate limiting
+  - Temporary IP blocking
+  - IDS-style alert generation
+- Monitoring endpoints for blocked clients and security alerts.
 
 ## Project Structure
 
-- `app/app.py`: Flask application and route handlers.
-- `app/security.py`: Security engine (rate limit + strike/block + alerts).
-- `scripts/ddos_simulator.py`: High-concurrency attack simulation.
-- `scripts/normal_traffic.py`: Baseline normal-user traffic simulation.
-- `tests/test_security.py`: Unit tests for defense behavior.
+| Path | Description |
+| --- | --- |
+| `app/app.py` | Flask app and route handlers |
+| `app/security.py` | Security logic for rate limiting, strikes, temporary blocks, and alerts |
+| `scripts/normal_traffic.py` | Simulates baseline user behavior |
+| `scripts/ddos_simulator.py` | Simulates high-concurrency abusive traffic |
+| `tests/test_security.py` | Unit tests for defense behavior |
 
-## Setup
+## Getting Started
+
+### 1. Install Dependencies
 
 ```bash
 python -m pip install -r requirements.txt
 ```
 
-## Run Website
+### 2. Run the Application
 
 ```bash
 python app/app.py
 ```
 
-Server starts at `http://127.0.0.1:5000`.
+Application URL: `http://127.0.0.1:5000`
 
-Main routes:
+## Application Routes
+
+**Core routes**
 - `/`
 - `/login`
 - `/products`
 - `/cart/add` (POST JSON: `{"product_id": 1}`)
 - `/checkout`
 
-Monitoring routes:
-- `/admin/blocked` (shows currently blocked IPs)
-- `/admin/alerts` (IDS-style alert stream)
+**Security/monitoring routes**
+- `/admin/blocked` - list of currently blocked IPs
+- `/admin/alerts` - IDS-style alert stream
 
-## Baseline Demo (Normal Traffic)
+## Traffic Simulation
 
-In another terminal:
+### Baseline (Normal) Traffic
+
+Run in a separate terminal:
 
 ```bash
 python scripts/normal_traffic.py --base-url http://127.0.0.1:5000 --duration 20 --interval 0.6
 ```
 
-Expected: very low or zero blocked requests.
+Expected result: little to no blocked requests.
 
-## DDoS Simulation Demo
+### DDoS Simulation
 
-In another terminal:
+Run in a separate terminal:
 
 ```bash
 python scripts/ddos_simulator.py --base-url http://127.0.0.1:5000 --path /products --workers 80 --duration 20 --delay 0.01
 ```
 
-Expected:
-- Many `429` responses after threshold crossing.
-- IP eventually appears in `/admin/blocked`.
-- Alerts in `/admin/alerts` with reasons:
+Expected results:
+- Increased `429 Too Many Requests` responses once thresholds are crossed
+- Offending IPs appear in `/admin/blocked`
+- Alerts in `/admin/alerts` such as:
   - `ids-burst-detected`
   - `rate-limit-exceeded`
   - `ip-blocked`
 
-## Case Study Narrative (Use in Report)
-
-1. Show normal behavior under regular traffic (service mostly available).
-2. Trigger attack and observe request spikes.
-3. Observe rate limiting activating first (balanced defense).
-4. Observe repeated abuse causing temporary firewall block (60s).
-5. Show IDS-like alerts proving suspicious pattern detection.
-6. Conclude how layered controls preserve service and visibility.
-
-## Run Tests
+## Test Suite
 
 ```bash
 pytest -q
 ```
 
-These tests validate:
-- Rate limit then block flow.
-- IDS-style burst detection alerts.
+The tests cover the rate-limit-to-block flow and IDS-style burst detection behavior.
